@@ -17,7 +17,9 @@ namespace Nightingale {
 		SerializedProperty m_ColumnProperty;
 		SerializedProperty m_CellSizeProperty;
 		SerializedProperty m_ItemResourceProperty;
+		SerializedProperty m_DataSourceObjectProperty;
 
+		int PrepareItemCount;
 		protected void OnEnable() {
 
 			CollectionView view_script = ( CollectionView )serializedObject.targetObject;
@@ -32,7 +34,10 @@ namespace Nightingale {
 			m_RowProperty = serializedObject.FindProperty( "Row" );
 			m_ColumnProperty = serializedObject.FindProperty( "Column" );
 			m_CellSizeProperty = serializedObject.FindProperty( "CellSize" );
-			m_ItemResourceProperty = serializedObject.FindProperty( "ItemResource" );
+			m_ItemResourceProperty = serializedObject.FindProperty( "ViewItemResource" );
+			m_DataSourceObjectProperty = serializedObject.FindProperty( "DataSourceObject" );
+
+			PrepareItemCount = view_script.Pool.Count;
 		}
 
 		public override void OnInspectorGUI() {
@@ -41,9 +46,21 @@ namespace Nightingale {
 			serializedObject.Update();
 
 			EditorGUILayout.PropertyField( m_ViewTargetProperty );
-			EditorGUILayout.PropertyField( m_ItemResourceProperty );
 
 			CollectionView view_script = ( CollectionView )serializedObject.targetObject;
+
+			EditorGUILayout.PropertyField( m_ItemResourceProperty );
+
+			EditorGUILayout.LabelField( "DataSource" );
+			EditorGUI.indentLevel++;
+			EditorGUILayout.PropertyField( m_DataSourceObjectProperty );
+			string data_source_label = "Count: ";
+			int data_souce_count = 0;
+			if ( view_script.DataSource != null ) {
+				data_souce_count = view_script.DataSource.Count;
+			}
+			EditorGUILayout.LabelField( data_source_label + data_souce_count );
+			EditorGUI.indentLevel--;
 
 			EditorGUILayout.LabelField( "View Layout" );
 			EditorGUI.indentLevel++;
@@ -56,19 +73,31 @@ namespace Nightingale {
 			if ( EditorGUI.EndChangeCheck() ) {
 				rebuild_view_item_layout = true;
 			}
+			EditorGUI.indentLevel--;
+
+			ObjectPool pool_script = view_script.Pool;
+
+			EditorGUILayout.LabelField( "Pool Object" );
+			EditorGUI.indentLevel++;
+
+			EditorGUILayout.LabelField( "Empty: " + pool_script.AvailableCount + " / Use: " + pool_script.UseCount );
+
+//			EditorGUI.indentLevel--;
 
 			var r = EditorGUILayout.BeginHorizontal();
-			if ( GUILayout.Button( "Prepare Items" ) == true ) {
+			PrepareItemCount = EditorGUILayout.IntField( "Prepare Items", PrepareItemCount );
+			if ( GUILayout.Button( "Create" ) == true ) {
 
-				if ( view_script.ItemResource != null ) {
+				if ( view_script.ViewItemResource != null ) {
 
-					view_script.InitializeViewItems( view_script.ViewTarget.content, view_script.Row * view_script.Column );
+					// Row+1なのはスクロール時に一列余分に表示される可能性があるから。
+					view_script.InitializeViewItems( view_script.ViewTarget.content, PrepareItemCount );
 
 					rebuild_view_item_layout = true;
 				}
 
 			}
-			if ( GUILayout.Button( "Remove Items" ) == true ) {
+			if ( GUILayout.Button( "Delete" ) == true ) {
 				view_script.ViewTarget.content.DetachChildren();
 				view_script.DeleteAllViewItem();
 			}
@@ -76,7 +105,7 @@ namespace Nightingale {
 
 			EditorGUI.indentLevel--;
 
-			EditorGUILayout.IntField( view_script.PrepareItemCount );
+			//EditorGUILayout.IntField( view_script.PrepareItemCount );
 
 			serializedObject.ApplyModifiedProperties();
 

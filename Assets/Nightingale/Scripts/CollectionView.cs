@@ -6,87 +6,102 @@ using System.Collections.Generic;
 
 namespace Nightingale {
 
-	[RequireComponent (typeof (RectTransform))]
+	[RequireComponent( typeof( RectTransform ) )]
 	public class CollectionView : UIBehaviour {
 
 
-	public ScrollRect ViewTarget;
-		public ICollectionDataSource DataSource;
-		//public bool PrepareItems;
+		public ScrollRect ViewTarget;
 
-		public int PrepareItemCount;
+		public ICollectionDataSource DataSource;
+		public GameObject DataSourceObject;
+
+		public int RowPosition;
 
 		public int Row;
 		public int Column;
 
 		public Vector2 CellSize;
 
-		public GameObject ItemResource;
+		public GameObject ViewItemResource;
 
 		[SerializeField]
-		ObjectPool Pool;
-		//private List<GameObject> ManagedItems;
+		public ObjectPool Pool;
 
+		/*!
+			@brief アイテム単体の初期化
+		*/
 		public void SetupItem( GameObject obj, Transform parent ) {
-			
+
 			if ( parent != null ) {
 				obj.transform.SetParent( parent );
 			}
 			obj.transform.localPosition = Vector3.zero;
+			obj.SetActive( false );
 		}
 
+		/*!
+			@brief 指定した数のアイテムを生成して初期化
+		*/
 		public void InitializeViewItems( Transform parent, int count ) {
 
-			Pool.Initialize( ItemResource, count );
+			Pool.Initialize( ViewItemResource, count );
 
 			for ( int i = 0; i < count; ++i ) {
-				SetupItem( Pool.Pop(), parent );
+				SetupItem( Pool.Get(), parent );
 			}
 
 		}
 
+		/*!
+			@brief 全てのアイテムを削除する。
+			*/
 		public void DeleteAllViewItem() {
 
 			Pool.Clear();
 
 		}
 
+		/*!
+			@brief エディター時のレイアウト調整を行う
+			
+			*/
 		public void EditorRebuildViewItemLayout() {
 
-			//Debug.Log( "RebuildViewItemLayout" );
+			Debug.Log( "RebuildViewItemLayout" );
 
-			//int item_count = Row * Column;
-			//int diff_count = item_count - ManagedItems.Count;
+			RemoveAllViewItem();
 
-			//if ( diff_count >= 0 ) {
-			//	CreateViewItems( ViewTarget.content, diff_count );
-			//} else {
-			//	DeleteViewItem( Mathf.Abs( diff_count ) );
-			//}
+			Pool.ReleaseAll();
 
-			//// ひとまず縦方向だけを考慮して・・・。
-			//var size_delta = ViewTarget.content.sizeDelta;
-			//size_delta.y = Row * CellSize.y;
-			//// スクロールバーのサイズを考慮するのは後にしよう
-			//if ( ViewTarget.horizontalScrollbar != null ) {
-			//}
-			//if ( ViewTarget.verticalScrollbar != null ) {
-			//}
-			//ViewTarget.content.sizeDelta = size_delta;
+			// ひとまず縦方向だけを考慮して・・・。
+			var size_delta = ViewTarget.content.sizeDelta;
+			size_delta.y = Row * CellSize.y;
+			// スクロールバーのサイズを考慮するのは後にしよう
+			if ( ViewTarget.horizontalScrollbar != null ) {
+			}
+			if ( ViewTarget.verticalScrollbar != null ) {
+			}
+			ViewTarget.content.sizeDelta = size_delta;
 
-			//for ( int y = 0; y < Row; ++ y ) {
-			//	for ( int x = 0; x < Column; ++x ) {
+			for ( int y = 0; y < Row; ++y ) {
+				for ( int x = 0; x < Column; ++x ) {
 
-			//		var rt = ManagedItems[ y * Column + x ].GetComponent<RectTransform>();
+					if ( Pool.AvailableCount == 0 ) {
+						break;
+					}
 
-			//		rt.transform.localPosition = new Vector3(
-			//			x * CellSize.x + rt.pivot.x * CellSize.x,
-			//			-( y * CellSize.y + rt.pivot.y * CellSize.y ),
-			//			0.0f
-			//		);
+					var go = Pool.Get();
+					go.SetActive( true );
+					var rt = go.GetComponent<RectTransform>();
 
-			//	}
-			//}
+					rt.transform.localPosition = new Vector3(
+						x * CellSize.x + rt.pivot.x * CellSize.x,
+						-( y * CellSize.y + rt.pivot.y * CellSize.y ),
+						0.0f
+					);
+
+				}
+			}
 
 		}
 
@@ -94,39 +109,63 @@ namespace Nightingale {
 
 			Debug.Log( "RebuildViewItemLayout" );
 
-			// ひとまず縦方向だけを考慮して計算
+			RemoveAllViewItem();
+
+			Pool.ReleaseAll();
+
+			// ひとまず縦方向だけを考慮して・・・。
+			var size_delta = ViewTarget.content.sizeDelta;
+			size_delta.y = Row * CellSize.y;
+			// スクロールバーのサイズを考慮するのは後にしよう
+			if ( ViewTarget.horizontalScrollbar != null ) {
+			}
+			if ( ViewTarget.verticalScrollbar != null ) {
+			}
+			ViewTarget.content.sizeDelta = size_delta;
+
 			int data_count = DataSource.Count;
-			int draw_row_count = Mathf.CeilToInt( ( float )data_count / Column );
+			int row_count = Mathf.CeilToInt( ( float )data_count / Column );
 
-			var v = ViewTarget.content.sizeDelta;
-			v.y = draw_row_count * CellSize.y;
+			int data_index = 0;
 
-			ViewTarget.content.sizeDelta = v;
+			for ( int y = 0; y < row_count; ++y ) {
 
+				int col_count = ( data_count - ( Column * y ) >= Column ) ? Column : data_count % Column;
 
-			//for ( int y = 0; y < Row; ++y ) {
-			//	for ( int x = 0; x < Column; ++x ) {
-			//		var obj = ManagedItems[ y * Column + x ];
-			//		if ( obj.activeSelf == false ) {
-			//			continue;
-			//		}
-			//		var rt = obj.GetComponent<RectTransform>();
+				for ( int x = 0; x < col_count; ++x ) {
 
-			//		rt.transform.localPosition = new Vector3(
-			//			x * CellSize.x + rt.pivot.x * CellSize.x,
-			//			-( y * CellSize.y + rt.pivot.y * CellSize.y ),
-			//			0.0f
-			//		);
+					if ( Pool.AvailableCount == 0 ) {
+						break;
+					}
 
-			//	}
-			//}
+					var go = Pool.Get();
+					go.SetActive( true );
+					var rt = go.GetComponent<RectTransform>();
 
+					rt.transform.localPosition = new Vector3(
+						x * CellSize.x + rt.pivot.x * CellSize.x,
+						-( y * CellSize.y + rt.pivot.y * CellSize.y ),
+						0.0f
+					);
+
+					System.Object item_data = DataSource.At( data_index );
+					var vi = go.GetComponent<ICollectionViewItem>();
+					vi.OnUpdate( item_data );
+
+					++data_index;
+				}
+			}
 		}
 
+		/*!
+			@brief 使用中のアイテムを全部未使用にする。
+		*/
 		void RemoveAllViewItem() {
-			//foreach ( var item in ManagedItems ) {
-			//	item.SetActive( false );
-			//}
+			var item = Pool.UseItems();
+			while ( item.MoveNext() ) {
+				GameObject go = ( GameObject )item.Current;
+				go.SetActive( false );
+			}
 		}
 
 		GameObject PopViewItem() {
@@ -135,54 +174,54 @@ namespace Nightingale {
 		void PushViewItem( GameObject obj ) {
 		}
 
-		void ItemUpdateAll() {
+		//void ItemUpdateAll() {
 
-			if ( DataSource == null ) {
-				return;
-			}
+		//	if ( DataSource == null ) {
+		//		return;
+		//	}
 
-			RemoveAllViewItem();
-				
-			int data_count = DataSource.Count;
+		//	int top_position = RowPosition * Column;
 
-			int i = 0;
-			//foreach ( var item in ManagedItems ) {
+		//	int data_count = DataSource.Count;
+		//	System.Object obj = DataSource.At( 0 );
 
-			//	Debug.Log( "Data Index: " + i );
 
-			//	if ( data_count > i ) {
-			//		item.SetActive( true );
+		//	//			RuntimeRebuildViewItemLayout();
 
-			//		var data_item = DataSource.At( i );
+		//}
 
-			//		var view_item = item.GetComponent< ICollectionViewItem >();
-			//		view_item.OnUpdate( data_item );
+		/*!
+			@brief ICollectionDataSourceを指定した手動初期化
+		*/
+		public void SetupDataSource( ICollectionDataSource data_source ) {
 
-			//	} else {
+			DataSource = data_source;
 
-			//		item.SetActive( false );
-
-			//	}
-
-			//	++i;
-			//}
-			RuntimeRebuildViewItemLayout();
-
+//			ItemUpdateAll();
 		}
 
 		public void OnValueChanged( Vector2 v ) {
-//			Debug.Log( v );
+			//			Debug.Log( v );
 		}
 
 		// Use this for initialization
-		protected override void Start () {
+		protected override void Start() {
 
-			ItemUpdateAll();
+			// DataSourceオブジェクトが指定されている時は、コンポーネントを取得して自動で初期化をする。
+			if ( DataSourceObject != null ) {
+				ICollectionDataSource data_source = DataSourceObject.GetComponent<ICollectionDataSource>();
+				DataSource = data_source;
+
+				RemoveAllViewItem();
+				RuntimeRebuildViewItemLayout();
+
+//				ItemUpdateAll();
+			}
 
 		}
-		
+
 		// Update is called once per frame
-		void Update () {
+		void Update() {
 
 		}
 	}

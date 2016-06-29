@@ -21,12 +21,18 @@ namespace Nightingale {
 		SerializedProperty m_CollapseSizeProperty;
 		SerializedProperty m_ExpandSizeProperty;
 
+		SerializedProperty m_ContentsMaskProperty;
+		SerializedProperty m_ContentsRootProperty;
+
 		bool showLayoutSetting = false;
 
 		protected void OnEnable() {
 
 			m_CollapseSizeProperty = serializedObject.FindProperty( "CollapseSize" );
 			m_ExpandSizeProperty = serializedObject.FindProperty( "ExpandSize" );
+
+			m_ContentsMaskProperty = serializedObject.FindProperty( "ContentsMask" );
+			m_ContentsRootProperty = serializedObject.FindProperty( "ContentsRoot" );
 
 			m_TransitionProperty = serializedObject.FindProperty( "toggleTransition" );
 			m_IsClickEventHeaderOnlyProperty = serializedObject.FindProperty( "isClickEventHeaderOnly" );
@@ -43,6 +49,9 @@ namespace Nightingale {
 
 			serializedObject.Update();
 			AccordionButton button_script = ( AccordionButton )serializedObject.targetObject;
+
+			EditorGUILayout.PropertyField( m_ContentsMaskProperty );
+			EditorGUILayout.PropertyField( m_ContentsRootProperty );
 
 			EditorGUILayout.PropertyField( m_IsCollapsibleProperty );
 			var expand = EditorGUILayout.Toggle( "Is Expand", button_script.isExpand );

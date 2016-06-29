@@ -10,7 +10,7 @@ namespace Nightingale {
 		int Count {
 			get;
 		}
-		object At( int index );
+		System.Object At( int index );
 	}
 
 }

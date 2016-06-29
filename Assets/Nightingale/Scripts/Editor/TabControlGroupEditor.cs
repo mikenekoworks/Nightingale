@@ -7,7 +7,7 @@ using UnityEditorInternal;
 using System.Collections;
 
 namespace Nightingale {
-	[CustomEditor( typeof( TabControlGroup ), true )]
+	[CustomEditor( typeof( Nightingale.TabControlGroup ), true )]
 	[CanEditMultipleObjects]
 	public class TabControlGroupEditor : Editor {
 
